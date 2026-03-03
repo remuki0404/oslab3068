@@ -349,10 +349,66 @@ int main()
 
     return 0;
 
-output
-Parent process writing:
-abcdefghij
-Child process reading:
-abcdefghij
+Ex 6 
 
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdlib.h>
+
+sem_t mutex;
+int shared_resource = 0;
+
+void *thread_function(void *arg)
+{
+    int i, val;
+    long thread_id = (long)arg;
+
+    for (i = 0; i < 5; i++) {
+        sem_wait(&mutex);   // Lock the semaphore
+
+        val = shared_resource;
+        printf("Thread %ld: Read %d from shared resource\n", thread_id, val);
+
+        val++;
+        printf("Thread %ld: Writing %d to shared resource\n", thread_id, val);
+
+        shared_resource = val;
+
+        sem_post(&mutex);   // Unlock the semaphore
+    }
+
+    return NULL;
+}
+
+int main()
+{
+    pthread_t threads[3];
+    int i, ret;
+
+    // Initialize semaphore (1 = acts like mutex)
+    sem_init(&mutex, 0, 1);
+
+    // Create threads
+    for (i = 0; i < 3; i++) {
+        ret = pthread_create(&threads[i], NULL, thread_function, (void *)(long)i);
+        if (ret != 0) {
+            perror("pthread_create failed");
+            return -1;
+        }
+    }
+
+    // Wait for threads to finish
+    for (i = 0; i < 3; i++) {
+        ret = pthread_join(threads[i], NULL);
+        if (ret != 0) {
+            perror("pthread_join failed");
+            return -1;
+        }
+    }
+
+    printf("Final value of shared resource: %d\n", shared_resource);
+
+    sem_destroy(&mutex);
+    return 0;
 }
